@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.power.PowerAnalyzeDao">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.demo.entity.PowerAnalyze">
+        <id column="id" property="id" />
+        <result column="EMeterID" property="EMeterID" />
+        <result column="TimeTag" property="TimeTag" />
+        <result column="PowerTotal" property="PowerTotal" />
+        <result column="peak" property="peak" />
+        <result column="flat" property="flat" />
+        <result column="ravine" property="ravine" />
+        <result column="peakPercent" property="peakPercent" />
+        <result column="CreatedDateTime" property="CreatedDateTime" />
+    </resultMap>
+
+    <insert id="insertPowerAnalyze" parameterType="com.example.demo.entity.PowerAnalyze">
+         replace into PowerAnalyze(EMeterID,TimeTag,PowerTotal,peak,flat,ravine,peakPercent)
+         values (#{EMeterID},#{TimeTag},#{PowerTotal},#{peak},#{flat},#{ravine},#{peakPercent})
+    </insert>
+
+    <select id="getEMeterIDList" resultType="java.lang.Integer">
+        select e.EMeterID
+        from EMeters e,Ertus s
+        where e.ErtuID=s.ErtuID and s.ErtuLocation="同安" and e.`Online`=1 and s.`Online`=1 and e.ErtuID!=6
+    </select>
+
+
+    <select id="getPowerAnalyzeByDay" parameterType="com.example.demo.entity.Params" resultType="java.util.LinkedHashMap">
+        SELECT p.*,e.EMeterName
+        FROM PowerAnalyze p,EMeters e,Estations s
+        where e.EMeterName = #{EMeterName} and e.EStationID=s.EStationID and s.EStationName=#{EStationName} and e.EMeterID=p.EMeterID
+        <if test="dateType=='hour'">
+            and p.TimeTag = #{beginTime}
+        </if>
+        <if test="dateType=='day'">
+            and p.TimeTag BETWEEN #{beginTime} and DATE_ADD(#{beginTime}, INTERVAL 30 DAY)
+        </if>
+        order by TimeTag
+    </select>
+
+    <select id="exportAllPowerAnalyze"  resultType="com.example.demo.entity.ExportPeak">
+        SELECT e.EMeterName,p.EMeterID,p.TimeTag,p.PowerTotal,p.peak,p.flat,p.ravine,p.peakPercent
+        FROM PowerAnalyze p,EMeters e
+        where e.EMeterID=p.EMeterID and DATE_FORMAT(p.TimeTag,"%Y-%c") = #{month}
+    </select>
+
+    <select id="exportPowerByErtuID" resultType="com.example.demo.entity.ExportPeak">
+        SELECT e.EMeterName,p.EMeterID,p.TimeTag,p.PowerTotal,p.peak,p.flat,p.ravine,p.peakPercent
+        FROM PowerAnalyze p,EMeters e
+        where e.EMeterID=p.EMeterID and  DATE_FORMAT(p.TimeTag,"%Y-%c") = #{month} and e.ErtuID=#{ErtuID}
+    </select>
+
+        <!--按日导出-->
+    <select id="exportPowerByDay" parameterType="com.example.demo.entity.Params" resultType="com.example.demo.entity.ExportPeak">
+        SELECT e.EMeterName,p.EMeterID,p.TimeTag,p.PowerTotal,p.peak,p.flat,p.ravine,p.peakPercent
+        FROM PowerAnalyze p,EMeters e,Estations s
+        where e.EMeterName = #{EMeterName} and e.EStationID=s.EStationID and s.EStationName=#{EStationName} and e.EMeterID=p.EMeterID
+        <if test="dateType=='hour'">
+            and p.TimeTag = #{beginTime}
+        </if>
+        <if test="dateType=='day'">
+            and p.TimeTag BETWEEN #{beginTime} and DATE_ADD(#{beginTime}, INTERVAL 30 DAY)
+        </if>
+    </select>
+
+</mapper>

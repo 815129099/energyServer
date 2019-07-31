@@ -1,0 +1,492 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.user.UserDao">
+
+    <resultMap id="roleMap" type="com.example.demo.entity.One2Many">
+        <id column="roleId" property="roleId"/>
+        <result column="roleName" property="roleName"/>
+        <collection property="users" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="userId" property="userId"/>
+            <result column="nickname" property="nickname"/>
+        </collection>
+        <collection property="menus" ofType="com.example.demo.entity.One2Many">
+            <id column="menuCode" property="menuCode"/>
+            <result column="menuName" property="menuName"/>
+            <collection property="permissions" ofType="com.alibaba.fastjson.JSONObject">
+                <id column="permissionId" property="permissionId"/>
+                <result column="permissionName" property="permissionName"/>
+            </collection>
+        </collection>
+    </resultMap>
+    <select id="listRole" resultMap="roleMap">
+         SELECT
+            r.id              roleId,
+            r.role       roleName,
+            u.id              userId,
+            u.geName       nickname,
+            p.id              permissionId,
+            p.menuCode       menuCode,
+            p.menuName       menuName,
+            p.permissionname permissionName
+        FROM sys_role r
+            LEFT JOIN User u ON r.id = u.roleId AND u.userState = "有效"
+            LEFT JOIN sys_role_permission rp ON r.id = rp.roleId AND rp.rpState = 0
+            LEFT JOIN sys_permission p ON rp.permissionId = p.id
+        WHERE r.roleState = 0
+        ORDER BY r.id, p.id
+    </select>
+
+    <select id="listAllPermission" resultMap="permissionMap">
+        SELECT
+            p.id                  id,
+            p.menuName           menuName,
+            p.permissionName     permissionName,
+            p.requiredPermission requiredPerm
+        FROM sys_permission p;
+    </select>
+
+    <insert id="insertRole" useGeneratedKeys="true" keyProperty="roleId">
+        INSERT INTO sys_role
+        (role)
+        VALUES (#{roleName})
+    </insert>
+
+    <insert id="insertRolePermission">
+        insert into sys_role_permission (roleId, permissionId)
+        values
+        <foreach collection="permissions" item="item" index="index" separator=",">
+            (#{roleId}, #{item})
+        </foreach>
+    </insert>
+
+    <resultMap id="aRole" type="com.example.demo.entity.One2Many">
+        <id column="roleId" property="roleId"/>
+        <result column="roleName" property="roleName"/>
+        <collection property="users" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="userId" property="userId"/>
+        </collection>
+        <collection property="permissionIds" ofType="Integer">
+            <id column="permissionId" property="permissionId"/>
+        </collection>
+    </resultMap>
+    <select id="getRoleAllInfo" resultMap="aRole">
+        SELECT
+            r.id        roleId,
+            r.role roleName,
+            u.id        userId,
+            p.id        permissionId
+        FROM sys_role r
+            LEFT JOIN User u ON r.id = u.roleId AND u.userState = "有效"
+            LEFT JOIN sys_role_permission rp ON r.id = rp.roleId AND rp.rpState = 0
+            LEFT JOIN sys_permission p ON rp.permissionId = p.id
+        WHERE r.id = #{roleId}
+    </select>
+
+    <update id="removeRole">
+        UPDATE sys_role
+        SET
+            roleState = 1
+        WHERE id = #{roleId} and id !=1
+    </update>
+    <update id="removeRoleAllPermission">
+        UPDATE sys_role_permission
+        SET
+            rpState=1
+        WHERE roleId = #{roleId}
+    </update>
+
+    <update id="removeOldPermission">
+        UPDATE sys_role_permission
+        SET
+        rpState=1
+        WHERE roleId = #{roleId}
+        AND permissionId in (
+        <foreach collection="permissions" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+    <update id="updateRoleName">
+        UPDATE sys_role
+        SET
+            role = #{roleName}
+        WHERE id = #{roleId}
+    </update>
+    <select id="queryExistUsername" resultType="int">
+        select count(0)
+         from User
+         WHERE geNumber=#{username}
+         AND userState="有效";
+    </select>
+    <select id="getUserByCode" resultType="com.example.demo.entity.User">
+        select *
+        from User
+        where md5Code=#{md5Code}
+    </select>
+
+    <select id="getUserByNumber" resultType="com.example.demo.entity.User" parameterType="java.lang.String">
+        select *
+        from User
+        where geNumber = #{geNumber}
+    </select>
+
+    <select id="userList" resultType="com.example.demo.entity.User">
+        select u.id,u.geNumber,u.geName,u.userState,u.phone,u.email,date_format(u.createTime,'%Y-%m-%d %H:%i:%s') as createTime,date_format(u.updateTime,'%Y-%m-%d %H:%i:%s') as updateTime
+             ,r.role
+        from User u ,sys_role r
+        where u.roleId=r.id and  userState != "删除" and  geName like CONCAT('%',#{parameter},'%')
+
+    </select>
+
+    <resultMap id="permissionMap" type="com.example.demo.entity.One2Many">
+        <id column="menuName" property="menuName"/>
+        <collection property="permissions" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="id" property="id"/>
+            <result column="permissionName" property="permissionName"/>
+            <result column="requiredPerm" property="requiredPerm" javaType="Integer"/>
+        </collection>
+    </resultMap>
+
+
+    <resultMap id="userMap" type="com.example.demo.entity.One2Many">
+        <id column="userId" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="nickname" property="nickname"/>
+        <result column="roleId" property="roleId"/>
+        <result column="roleName" property="roleName"/>
+        <result column="createTime" property="createTime"/>
+        <result column="updateTime" property="updateTime"/>
+        <result column="lastLoginTime" property="lastLoginTime"/>
+        <result column="deleteStatus" property="deleteStatus"/>
+        <collection property="permissionList" ofType="String">
+            <id column="permissionName" property="permissionName"/>
+        </collection>
+    </resultMap>
+
+
+    <select id="getAllRoles" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+            id        roleId,
+            role roleName
+        FROM sys_role
+        WHERE roleState=0
+    </select>
+    <!-- 通用查询映射结果
+    <resultMap id="BaseResultMap" type="com.example.demo.entity.User">
+        <id column="id" property="id" />
+        <result column="geNumber" property="geNumber" />
+        <result column="password" property="password" />
+        <result column="geName" property="geName" />
+        <result column="createTime" property="createTime" />
+    </resultMap>
+
+    <select id="findRoles" resultType="java.lang.String" parameterType="java.lang.String">
+        select r.role
+        from Role r
+        where geNumber = #{geNumber}
+    </select>
+
+    <select id="findPermissions" resultType="java.lang.String" parameterType="java.lang.String">
+        select r.permission
+        from Role r
+        where geNumber = #{geNumber}
+    </select>
+
+
+
+    <select id="testUserList" resultType="com.example.demo.entity.User">
+        select *
+        from User
+    </select>
+
+    <select id="getUser" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+            u.id       userId,
+            u.geNumber geNumber,
+            u.password password,
+            u.geName geName
+        FROM
+            user u
+        WHERE u.geNumber = #{username}
+          AND u.password = #{password}
+          AND u.userState = '0'
+    </select>
+
+
+    <select id="getUserPermission" resultMap="permissionMap">
+        SELECT
+            u.id              userId,
+            u.geName          nickname,
+            u.roleId          roleId,
+            r.role            roleName,
+            p.menuCode        menuCode,
+            p.permissionCode  permissionCode
+        FROM user u
+                 LEFT JOIN role r ON r.id = u.roleId
+                 LEFT JOIN rolepermission rp ON u.roleId = rp.role_id
+                 LEFT JOIN permission p ON rp.permission_id = p.id AND rp.delete_status = '1'
+        WHERE u.geNumber = #{username}
+          AND u.userState = 0
+    </select>
+
+    <select id="getAllPermission" resultType="String">
+        SELECT p.permissionCode permissionCode
+        FROM permission p
+        ORDER BY p.id
+    </select>
+    <select id="getAllMenu" resultType="String">
+        SELECT p.menuCode menuCode
+        FROM permission p
+        ORDER BY p.id
+    </select>-->
+
+
+    <!--
+    <select id="countUser" resultType="Integer">
+            SELECT count(0)
+            FROM User u
+            WHERE u.userState = 0
+        </select>
+    <select id="listUser" resultMap="userMap">
+           SELECT
+                u.*,
+                r.role                            roleName,
+                CONCAT(p.menuName, p.permissionName) permissionName
+            FROM (
+                     SELECT
+                         id                                      userId,
+                         geNumber                                username,
+                         geName                                  nickname,
+                         roleId                                 roleId,
+                         userState                           deleteStatus,
+                         DATE_FORMAT(createTime, '%Y.%m.%d %T') createTime,
+                         DATE_FORMAT(updateTime, '%Y.%m.%d %T') updateTime
+                     FROM User
+                     WHERE userState = 0
+                     ORDER BY id
+                     LIMIT #{offSet}, #{pageRow}
+                 ) u
+                LEFT JOIN sys_role r ON r.id = u.roleId
+                LEFT JOIN sys_role_permission rp ON rp.roleId = r.id
+                LEFT JOIN sys_permission p ON p.id = rp.permissionId
+
+            ORDER BY u.userId
+        </select>
+    <insert id="addUser" useGeneratedKeys="true" keyProperty="userId">
+            INSERT INTO User
+            (geNumber,password, geName, roleId,userState,md5Code,phone,email) VALUES
+                (#{username}, #{password}, #{nickname}, #{roleId},0,#{md5Code},#{phone},#{email})
+        </insert>
+        <update id="updateUser">
+            UPDATE User
+            SET
+            geName = #{nickname}
+            <if test="password !='' and password !=null">
+                , password = #{password}
+            </if>
+
+            , roleId = #{roleId}
+            , userState = #{deleteStatus}
+            WHERE id = #{userId} and id != 10001
+        </update>
+    -->
+
+
+    <!--
+    <select id="countUser" resultType="Integer">
+        SELECT count(0)
+        FROM User u
+        WHERE u.delete_status = '1'
+    </select>
+
+    <resultMap id="userMap" type="com.example.demo.entity.One2Many">
+        <id column="userId" property="userId"/>
+        <result column="username" property="username"/>
+        <result column="nickname" property="nickname"/>
+        <result column="roleId" property="roleId"/>
+        <result column="roleName" property="roleName"/>
+        <result column="createTime" property="createTime"/>
+        <result column="updateTime" property="updateTime"/>
+        <result column="lastLoginTime" property="lastLoginTime"/>
+        <result column="deleteStatus" property="deleteStatus"/>
+        <collection property="permissionList" ofType="String">
+            <id column="permissionName" property="permissionName"/>
+        </collection>
+    </resultMap>
+    <select id="listUser" resultMap="userMap">
+        SELECT
+            u.*,
+            r.role_name                            roleName,
+            CONCAT(p.menu_name, p.permission_name) permissionName
+        FROM (
+                 SELECT
+                     id                                      userId,
+                     username                                username,
+                     nickname                                nickname,
+                     role_id                                 roleId,
+                     delete_status                           deleteStatus,
+                     DATE_FORMAT(create_time, '%Y.%m.%d %T') createTime,
+                     DATE_FORMAT(update_time, '%Y.%m.%d %T') updateTime
+                 FROM User
+                 WHERE delete_status = '1'
+                 ORDER BY id
+                 LIMIT #{offSet}, #{pageRow}
+             ) u
+            LEFT JOIN sys_role r ON r.id = u.roleId
+            LEFT JOIN sys_role_permission rp ON rp.role_id = r.id
+            LEFT JOIN sys_permission p ON p.id = rp.permission_id
+
+        ORDER BY u.userId
+    </select>
+
+    <select id="getAllRoles" resultType="com.alibaba.fastjson.JSONObject">
+        SELECT
+            id        roleId,
+            role_name roleName
+        FROM sys_role
+        WHERE delete_status='1'
+    </select>
+
+    <insert id="addUser" useGeneratedKeys="true" keyProperty="userId">
+        INSERT INTO User
+        (username, password, nickname, role_id) VALUES
+            (#{username}, #{password}, #{nickname}, #{roleId})
+    </insert>
+
+    <update id="updateUser">
+        UPDATE User
+        SET
+        nickname = #{nickname}
+        <if test="password !='' and password !=null">
+            , password = #{password}
+        </if>
+
+        , role_id = #{roleId}
+        , delete_status = #{deleteStatus}
+        WHERE id = #{userId} and id != 10001
+    </update>
+
+    <resultMap id="roleMap" type="com.example.demo.entity.One2Many">
+        <id column="roleId" property="roleId"/>
+        <result column="roleName" property="roleName"/>
+        <collection property="users" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="userId" property="userId"/>
+            <result column="nickname" property="nickname"/>
+        </collection>
+        <collection property="menus" ofType="com.example.demo.entity.One2Many">
+            <id column="menuCode" property="menuCode"/>
+            <result column="menuName" property="menuName"/>
+            <collection property="permissions" ofType="com.alibaba.fastjson.JSONObject">
+                <id column="permissionId" property="permissionId"/>
+                <result column="permissionName" property="permissionName"/>
+            </collection>
+        </collection>
+    </resultMap>
+    <select id="listRole" resultMap="roleMap">
+        SELECT
+            r.id              roleId,
+            r.role_name       roleName,
+            u.id              userId,
+            u.nickname        nickname,
+            p.id              permissionId,
+            p.menu_code       menuCode,
+            p.menu_name       menuName,
+            p.permission_name permissionName
+        FROM sys_role r
+            LEFT JOIN User u ON r.id = u.role_id AND u.delete_status = '1'
+            LEFT JOIN sys_role_permission rp ON r.id = rp.role_id AND rp.delete_status = '1'
+            LEFT JOIN sys_permission p ON rp.permission_id = p.id
+        WHERE r.delete_status = '1'
+        ORDER BY r.id, p.id
+    </select>
+    <resultMap id="permissionMap" type="com.example.demo.entity.One2Many">
+        <id column="menuName" property="menuName"/>
+        <collection property="permissions" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="id" property="id"/>
+            <result column="permissionName" property="permissionName"/>
+            <result column="requiredPerm" property="requiredPerm" javaType="Integer"/>
+        </collection>
+    </resultMap>
+    <select id="listAllPermission" resultMap="permissionMap">
+        SELECT
+            p.id                  id,
+            p.menu_name           menuName,
+            p.permission_name     permissionName,
+            p.required_permission requiredPerm
+        FROM sys_permission p;
+    </select>
+
+    <insert id="insertRole" useGeneratedKeys="true" keyProperty="roleId">
+        INSERT INTO sys_role
+        (role_name)
+        VALUES (#{roleName})
+    </insert>
+
+    <insert id="insertRolePermission">
+        insert into sys_role_permission (role_id, permission_id)
+        values
+        <foreach collection="permissions" item="item" index="index" separator=",">
+            (#{roleId}, #{item})
+        </foreach>
+    </insert>
+
+    <resultMap id="aRole" type="com.example.demo.entity.One2Many">
+        <id column="roleId" property="roleId"/>
+        <result column="roleName" property="roleName"/>
+        <collection property="users" ofType="com.alibaba.fastjson.JSONObject">
+            <id column="userId" property="userId"/>
+        </collection>
+        <collection property="permissionIds" ofType="Integer">
+            <id column="permissionId" property="permissionId"/>
+        </collection>
+    </resultMap>
+    <select id="getRoleAllInfo" resultMap="aRole">
+        SELECT
+            r.id        roleId,
+            r.role_name roleName,
+            u.id        userId,
+            p.id        permissionId
+        FROM sys_role r
+            LEFT JOIN User u ON r.id = u.role_id AND u.delete_status = '1'
+            LEFT JOIN sys_role_permission rp ON r.id = rp.role_id AND rp.delete_status = '1'
+            LEFT JOIN sys_permission p ON rp.permission_id = p.id
+        WHERE r.id = #{roleId}
+    </select>
+
+    <update id="removeRole">
+        UPDATE sys_role
+        SET
+            delete_status = '2'
+        WHERE id = #{roleId} and id !=1
+    </update>
+    <update id="removeRoleAllPermission">
+        UPDATE sys_role_permission
+        SET
+            delete_status = '2'
+        WHERE role_id = #{roleId}
+    </update>
+
+    <update id="removeOldPermission">
+        UPDATE sys_role_permission
+        SET
+        delete_status = '2'
+        WHERE role_id = #{roleId}
+        AND permission_id in (
+        <foreach collection="permissions" item="item" index="index" separator=",">
+            #{item}
+        </foreach>
+        )
+    </update>
+    <update id="updateRoleName">
+        UPDATE sys_role
+        SET
+            role_name = #{roleName}
+        WHERE id = #{roleId}
+    </update>
+    <select id="queryExistUsername" resultType="int">
+        select count(0)
+         from User
+         WHERE username=#{username}
+         AND delete_status='1';
+    </select>-->
+</mapper>

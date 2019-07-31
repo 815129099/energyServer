@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.power.OrigRtvDao">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.demo.entity.OrigRtv">
+        <id column="ErtuID" property="ErtuID" />
+        <result column="EMeterNum" property="EMeterNum" />
+        <result column="EMeterID" property="EMeterID" />
+        <result column="TimeTag" property="TimeTag" />
+        <result column="Ua" property="Ua" />
+        <result column="Ub" property="Ub" />
+        <result column="Uc" property="Uc" />
+        <result column="Ia" property="Ia" />
+        <result column="Ib" property="Ib" />
+        <result column="Ic" property="Ic" />
+        <result column="P" property="P" />
+        <result column="Pa" property="Pa" />
+        <result column="Pb" property="Pb" />
+        <result column="Pc" property="Pc" />
+        <result column="Q" property="Q" />
+        <result column="Qa" property="Qa" />
+        <result column="Qb" property="Qb" />
+        <result column="Qc" property="Qc" />
+        <result column="Cos" property="Cos" />
+        <result column="CosA" property="CosA" />
+        <result column="CosB" property="CosB" />
+        <result column="CosC" property="CosC" />
+        <result column="Hz" property="Hz" />
+        <result column="Source" property="Source" />
+        <result column="Status" property="Status" />
+        <result column="CreatedDateTime" property="CreatedDateTime" />
+        <result column="UpdatedDateTime" property="UpdatedDateTime" />
+    </resultMap>
+
+    <insert id="insertOrigRtv" parameterType="com.example.demo.entity.OrigRtv">
+        replace into OrigRtv(ErtuID,EMeterNum,EMeterID,TimeTag,Ua,Ub,Uc,Ia,Ib,Ic,P,Pa,Pb,Pc,Q,Qa,Qb,Qc,Cos,CosA,CosB,CosC,Hz,Source)
+        values (#{ErtuID},#{EMeterNum},#{EMeterID},#{TimeTag},#{Ua},#{Ub},#{Uc},#{Ia},#{Ib},#{Ic},#{P},#{Pa},#{Pb},#{Pc},#{Q},#{Qa},#{Qb},#{Qc},#{Cos},#{CosA},#{CosB},#{CosC},1,0)
+    </insert>
+
+    <select id="getInstantPowerAnalyzeByDay" parameterType="com.example.demo.entity.Params" resultType="java.util.LinkedHashMap">
+          SELECT date_format(o.TimeTag,"%c-%e %H:%i") Time,o.Ua Ua,o.Ub Ub,o.Uc Uc,o.Ia Ia,o.Ib Ib,o.Ic Ic,ROUND(e.PT1/e.PT2,0) U,ROUND(e.CT1/e.CT2,0) I,e.MultiplyRatio
+          FROM EMeters e,OrigRtv o,Estations s
+          where  e.EMeterName = #{EMeterName} and e.EStationID=s.EStationID and s.EStationName=#{EStationName} and e.EMeterID=o.EMeterID and  o.TimeTag BETWEEN #{beginTime} and DATE_ADD(#{beginTime}, INTERVAL 24 HOUR)
+    </select>
+
+    <select id="getInstantPowerAnalyzeByWeek" parameterType="com.example.demo.entity.Params" resultType="java.util.LinkedHashMap">
+          SELECT date_format(o.TimeTag,"%c-%e %H:%i") Time,o.Ua Ua,o.Ub Ub,o.Uc Uc,o.Ia Ia,o.Ib Ib,o.Ic Ic,ROUND(e.PT1/e.PT2,0) U,ROUND(e.CT1/e.CT2,0) I,e.MultiplyRatio
+          FROM EMeters e,OrigRtv o,Estations s
+          where  e.EMeterName = #{EMeterName} and e.EStationID=s.EStationID and s.EStationName=#{EStationName} and e.EMeterID=o.EMeterID and  o.TimeTag BETWEEN #{beginTime} and DATE_ADD(#{beginTime}, INTERVAL 7 DAY)
+    </select>
+</mapper>

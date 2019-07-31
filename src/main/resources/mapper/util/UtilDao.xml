@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.util.UtilDao">
+
+
+    <select id="getMenuList" resultType="java.util.LinkedHashMap">
+        select e.FactoryName,e.EStationName,m.EMeterName
+        from Estations e
+        left JOIN EMeters m
+        on m.EStationID = e.EStationID
+        where e.FactoryName!="未确定" and m.Online=1 and m.EMeterName!=""
+    </select>
+
+    <select id="getErtusList" resultType="java.util.LinkedHashMap">
+        select s.ErtuLocation,s.ErtuName,m.EMeterName
+        from Ertus s
+        LEFT JOIN EMeters m
+        on m.ErtuID=s.ErtuID
+        where s.ErtuName!="未确定"
+    </select>
+
+
+    <select id="recordList" resultType="com.example.demo.entity.Record">
+        select id,userName,IP,date_format(CreatedDateTime,'%Y-%m-%d %H:%i:%s') as CreatedDateTime
+        from Record
+        where userName like CONCAT('%',#{parameter},'%') or IP like CONCAT('%',#{parameter},'%')
+        ORDER BY CreatedDateTime desc
+    </select>
+
+    <!--获取上次登录时间和Ip-->
+    <select id="getTimeAndIp" parameterType="string" resultType="com.example.demo.entity.Record">
+        select IP,CreatedDateTime
+        from Record
+        where userName = #{geNumber} and  (select MAX(CreatedDateTime) FROM record) >= CreatedDateTime
+        ORDER by CreatedDateTime desc LIMIT 1
+    </select>
+
+    <!--访问总数-->
+    <select id="getTotalNumber" resultType="int">
+        select count(id)
+        from Record
+    </select>
+
+    <!--用户总数-->
+    <select id="getTotalUserNumber" resultType="int">
+        select count(id)
+        from sys_user
+    </select>
+
+    <!--查询最近七天的访问记录-->
+    <select id="getRecordNumberList" resultType="java.util.LinkedHashMap">
+        select date_format(CreatedDateTime,"%m-%d") name , count(id) value
+        from Record
+        where  CreatedDateTime > DATE_SUB(CURDATE(),INTERVAL 6 DAY)
+        group by name
+        ORDER BY name
+        LIMIT 7
+    </select>
+    
+    <select id="getErtuIDList" resultType="java.util.Map">
+        select DISTINCT e.ErtuID,s.IPAddr1 ip,s.IPPort1 port
+        from EMeters e,Ertus s
+        where e.ONLINE = 1 and e.ErtuID = s.ErtuID and s.ErtuID not in (2)
+    </select>
+
+    <!--通过采集器ID获取电表信息-->
+    <select id="getEMeterNumByErtuID" parameterType="int" resultType="java.util.Map">
+        select EMeterNum,EMeterID
+        from EMeters
+        where  ONLINE = 1 and ErtuID = #{ErtuID}
+    </select>
+
+    <!--通过电表ID获取电表信息-->
+    <select id="getEMeterNumByEMeterID" resultType="java.util.Map">
+        select EMeterNum,EMeterID
+        from EMeters
+        where  ONLINE = 1 and EMeterID in
+        <foreach item="item" index="index" collection="list"
+                 open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+    <!--查看最近7天的总电量-->
+    <select id="getTotalPower" resultType="java.util.Map">
+        SELECT e.EMeterID,o.ZxygZ,o.FxygZ,o.ZxwgZ,o.FxwgZ,o.TimeTag,(e.PT1*e.CT1)/(e.CT2*e.PT2) num,date_format(o.TimeTag,"%c-%d") Time,e.MultiplyRatio
+        FROM OrigDL o,EMeters e
+        where e.EMeterID in (1,2) and o.EMeterID=e.EMeterID and  o.TimeTag BETWEEN DATE_SUB(CURDATE(), INTERVAL 7 DAY) and CURDATE()
+        order by TimeTag,EMeterID
+    </select>
+
+    <select id="getErtuIDListByList" resultType="java.util.Map">
+        select DISTINCT e.ErtuID,s.IPAddr1 ip,s.IPPort1 port
+        from EMeters e,Ertus s
+        where e.ONLINE = 1 and e.ErtuID = s.ErtuID and s.ErtuID in
+        <foreach item="item" index="index" collection="array"
+                 open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        order by ErtuID
+    </select>
+</mapper>

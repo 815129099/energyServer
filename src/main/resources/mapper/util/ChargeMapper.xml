@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.util.ChargeDao">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.example.demo.entity.Charge">
+        <id column="id" property="id" />
+        <result column="peakTime" property="peakTime" />
+        <result column="jPeakCharge" property="jPeakCharge" />
+        <result column="tPeakCharge" property="tPeakCharge" />
+        <result column="hPeakCharge" property="hPeakCharge" />
+        <result column="flatTime" property="flatTime" />
+        <result column="jFlatCharge" property="jFlatCharge" />
+        <result column="tFlatCharge" property="tFlatCharge" />
+        <result column="hFlatCharge" property="hFlatCharge" />
+        <result column="ravineTime" property="ravineTime" />
+        <result column="jRavineCharge" property="jRavineCharge" />
+        <result column="tRavineCharge" property="tRavineCharge" />
+        <result column="hRavineCharge" property="hRavineCharge" />
+        <result column="Status" property="Status" />
+        <result column="CreatedDateTime" property="CreatedDateTime" />
+    </resultMap>
+
+    <select id="chargeList" resultType="com.example.demo.entity.Charge">
+        select id,peakTime,jPeakCharge,tPeakCharge,hPeakCharge,
+        flatTime,jFlatCharge,tFlatCharge,hFlatCharge,
+        ravineTime,jRavineCharge,tRavineCharge,hRavineCharge,Status,
+        date_format(CreatedDateTime,'%Y-%m-%d %H:%i:%s') as CreatedDateTime
+        from Charge
+        where status!=2
+        order by Status desc,CreatedDateTime desc
+    </select>
+
+    <!--设为默认值-->
+    <update id="updateCharge" parameterType="int">
+        update Charge
+        set Status=1
+        where id=#{id}
+    </update>
+
+    <!--清除默认-->
+    <update id="editCharge">
+        update Charge
+        set Status = 0
+        where Status=1
+    </update>
+
+    <select id="getCharge" resultType="com.example.demo.entity.Charge">
+        select * from Charge where Status=1
+    </select>
+
+
+</mapper>

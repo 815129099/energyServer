@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.power.OrigDLDao">
+
+
+    <insert id="insertOrigDL" parameterType="com.example.demo.entity.OrigDL">
+        replace into OrigDL(ErtuID,EMeterNum,EMeterID,TimeTag,ZxygZ,FxygZ,ZxwgZ,FxwgZ,Source)
+        values (#{ErtuID},#{EMeterNum},#{EMeterID},#{TimeTag},#{ZxygZ},#{FxygZ},#{ZxwgZ},#{FxwgZ},0)
+    </insert>
+
+    <!--按小时获取电量-->
+    <select id="getPowerAnalyzeByHour" parameterType="com.example.demo.entity.Params" resultType="java.util.LinkedHashMap">
+        SELECT o.ZxygZ,o.FxygZ,o.ZxwgZ,o.FxwgZ,o.TimeTag,(e.PT1*e.CT1)/(e.CT2*e.PT2) num,date_format(o.TimeTag,"%H:%i") Time,e.MultiplyRatio
+        FROM OrigDL o,EMeters e,Estations s
+        where e.EMeterName = #{EMeterName} and e.EStationID=s.EStationID and s.EStationName=#{EStationName} and e.EMeterID=o.EMeterID and o.TimeTag BETWEEN #{beginTime} and DATE_ADD(#{beginTime}, INTERVAL 24 HOUR)
+    </select>
+
+    <!--按天获取电量-->
+    <select id="getPowerAnalyzeByDay" parameterType="com.example.demo.entity.Params" resultType="java.util.LinkedHashMap">
+        SELECT o.ZxygZ,o.FxygZ,o.ZxwgZ,o.FxwgZ,o.TimeTag,(e.PT1*e.CT1)/(e.CT2*e.PT2) num,date_format(o.TimeTag,"%c-%d") Time,e.MultiplyRatio
+        FROM OrigDL o,EMeters e,Estations s
+        where e.EMeterName = #{EMeterName} and e.EStationID=s.EStationID and s.EStationName=#{EStationName} and e.EMeterID=o.EMeterID and date_format(o.TimeTag,"%H:%i:%s") = "00:00:00"
+                and  o.TimeTag BETWEEN #{beginTime} and DATE_ADD(#{beginTime}, INTERVAL 30 DAY)
+    </select>
+
+    <!--通过月份获取-->
+    <select id="getPowerByMonthAndID" resultType="java.util.Map" parameterType="java.util.Set">
+        select o.ErtuID,o.EMeterID,o.TimeTag,o.ZxygZ,o.FxygZ,o.ZxwgZ,o.FxwgZ,(e.PT1*e.CT1)/(e.CT2*e.PT2) num,e.MultiplyRatio
+        from OrigDL o,EMeters e
+        where o.EMeterID=e.EMeterID and o.EMeterID=#{id} and TimeTag BETWEEN #{month} and DATE_ADD(#{month}, INTERVAL 24 HOUR)
+        and  date_format(TimeTag,'%H') in
+        <foreach collection="hours" item="item" index="index" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </select>
+
+    <select id="getEMeterNum" resultType="java.util.Map">
+        SELECT e.EMeterID,e.EMeterName,s.EStationName
+        from EMeters e,EStations s
+        where e.EStationID = s.EStationID and e.EMeterName!="" and s.EStationName!="未确定" and e.ErtuID not in (2) and  e.Online!=0
+    </select>
+
+    <select id="getEMeterNumByErtuID" parameterType="int" resultType="java.util.Map">
+        SELECT e.EMeterID,e.EMeterName,s.EStationName
+        from EMeters e,EStations s
+        where e.EStationID = s.EStationID and e.EMeterName!="" and s.EStationName!="未确定" and e.ErtuID= #{ErtuID} and e.Online!=0
+    </select>
+
+    <select id="getEMeterIDByEStationName" parameterType="string" resultType="int">
+        select e.EMeterID
+        from EMeters e,Estations s
+        where e.EStationID=s.EStationID and s.EStationName=#{EStationName} and  e.Online!=0
+    </select>
+
+    <select id="getPowerData1" parameterType="com.example.demo.entity.Params" resultType="java.util.LinkedHashMap">
+        SELECT e.EMeterName,e.EMeterID,(e.PT1*e.CT1)/(e.CT2*e.PT2) num,e.MultiplyRatio
+        FROM EMeters e,Estations s
+        where e.EStationID=s.EStationID and e.Online=1 and e.EMeterName!=""
+        <!--电表不为空，厂站不为空-->
+        <if test="EMeterName!=null and EMeterName != '' and  EStationName!=null and EStationName != ''">
+            and e.EMeterName = #{EMeterName} and s.EStationName=#{EStationName}
+        </if>
+        <!--电表为空，厂站不为空-->
+        <if test=" EMeterName=='' and  EStationName!=null and EStationName!= ''">
+            and s.EStationName=#{EStationName}
+        </if>
+    </select>
+
+    <!--厂站-->
+    <select id="getAllDataByEStationName1" resultType="java.util.Map">
+        SELECT e.EMeterName,e.EMeterID ,(e.PT1*e.CT1)/(e.CT2*e.PT2) num,e.MultiplyRatio
+        FROM EMeters e,Estations s
+        where e.EStationID=s.EStationID and e.Online=1 and e.EMeterName!=""
+
+    </select>
+    <select id="getAllData1" resultType="java.util.Map">
+        SELECT e.EMeterName,e.EMeterID,(e.PT1*e.CT1)/(e.CT2*e.PT2) num,e.MultiplyRatio
+        FROM EMeters e
+        where e.Online=1 and e.EMeterName!=""
+    </select>
+
+    <!--电表-->
+    <select id="getPowerData" parameterType="com.example.demo.entity.Params" resultType="java.util.LinkedHashMap">
+        SELECT e.EMeterName,o.* ,(e.PT1*e.CT1)/(e.CT2*e.PT2) num,e.MultiplyRatio
+        FROM OrigDL o,EMeters e,Estations s
+        where  e.EStationID=s.EStationID  and e.EMeterID=o.EMeterID and  o.TimeTag between #{beginTime} and #{endTime}
+               and e.Online=1 and e.EMeterName!=""
+        <!--电表不为空，厂站不为空-->
+        <if test="EMeterName!=null and EMeterName != '' and  EStationName!=null and EStationName != ''">
+            and s.EStationName=#{EStationName} and e.EMeterName = #{EMeterName}
+        </if>
+        <!--电表为空，厂站不为空-->
+        <if test=" EMeterName=='' and  EStationName!=null and EStationName!= ''">
+            and s.EStationName=#{EStationName}
+        </if>
+        order by o.EMeterID,o.TimeTag
+    </select>
+    <!--厂站-->
+    <select id="getAllDataByEStationName" resultType="java.util.Map">
+        SELECT e.EMeterName,o.* ,(e.PT1*e.CT1)/(e.CT2*e.PT2) num,e.MultiplyRatio
+        FROM OrigDL o,EMeters e,Estations s
+        where e.EStationID=s.EStationID  and e.EMeterID=o.EMeterID and o.TimeTag between #{beginTime} and #{endTime}
+              and e.Online=1 and e.EMeterName!=""
+        and s.EStationName=#{EStationName}
+        order by o.EMeterID,o.TimeTag
+    </select>
+    <!--全厂-->
+    <select id="getAllData" resultType="java.util.Map">
+        SELECT e.EMeterName,o.* ,(e.PT1*e.CT1)/(e.CT2*e.PT2) num,e.MultiplyRatio
+        FROM OrigDL o,EMeters e
+        where e.EMeterID=o.EMeterID and o.TimeTag between #{beginTime} and #{endTime} and e.Online=1 and e.EMeterName!=""
+        order by o.EMeterID,o.TimeTag
+    </select>
+
+    <select id="getEDepartmentDate" parameterType="com.example.demo.entity.Params" resultType="java.util.LinkedHashMap">
+
+    </select>
+
+</mapper>

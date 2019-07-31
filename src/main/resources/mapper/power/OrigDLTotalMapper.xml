@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.demo.mapper.power.OrigDLTotalDao">
+
+    <select id="getEDepartmentData" parameterType="com.example.demo.entity.Params" resultType="java.util.Map">
+        SELECT d.EMeterID,d.EDepartmentName,d.EDepartmentNo,d.CostCenterName,d.CostCenterNo,d.EDepartmentRatio,d.CostCenterRatio
+        FROM EDepartment d,EMeters e,Estations s
+        where  e.EMeterID=d.EMeterID and e.online=1 and e.EStationID=s.EStationID and e.EMeterName!=""
+        <!--电表不为空，厂站不为空-->
+        <if test="EMeterName!=null and EMeterName != '' and  EStationName!=null and EStationName != ''">
+            and s.EStationName=#{EStationName} and e.EMeterName = #{EMeterName}
+        </if>
+        <!--电表为空，厂站不为空-->
+        <if test=" EMeterName=='' and  EStationName!=null and EStationName!= ''">
+            and s.EStationName=#{EStationName}
+        </if>
+        order by d.EMeterID
+    </select>
+
+</mapper>
